@@ -57,3 +57,4 @@ C:\Projects\OkvedConverter\OkvedApi\obj\Debug\net8.0\refint\OkvedApi.dll
 C:\Projects\OkvedConverter\OkvedApi\obj\Debug\net8.0\OkvedApi.pdb
 C:\Projects\OkvedConverter\OkvedApi\obj\Debug\net8.0\OkvedApi.genruntimeconfig.cache
 C:\Projects\OkvedConverter\OkvedApi\obj\Debug\net8.0\ref\OkvedApi.dll
+C:\Projects\OkvedConverter\OkvedApi\obj\Debug\net8.0\OkvedApi.sourcelink.json

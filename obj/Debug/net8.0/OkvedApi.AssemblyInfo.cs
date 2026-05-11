@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OkvedApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7d07d37f9c52e809a76f508285ee496dc0b7ecef")]
 [assembly: System.Reflection.AssemblyProductAttribute("OkvedApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OkvedApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
