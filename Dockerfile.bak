@@ -8,5 +8,4 @@ WORKDIR /app
 COPY --from=build /app .
 # Копируем файл базы данных из исходной папки в корень образа
 COPY okved.db .
-RUN chmod 666 okved.db
 ENTRYPOINT ["dotnet", "OkvedApi.dll"]

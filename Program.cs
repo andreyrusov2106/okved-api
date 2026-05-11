@@ -9,7 +9,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 string connectionString = "Data Source=okved.db";
-string validApiKey = "a6ffc074-757a-4cb4-9778-220599824bbd"; // придумайте сложнее
+string validApiKey = "a6ffc074-757a-4cb4-9778-220599824bbd";
 
 bool IsValidApiKey(HttpRequest request)
 {
