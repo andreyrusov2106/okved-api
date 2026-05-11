@@ -9,7 +9,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 string connectionString = "Data Source=okved.db";
-string validApiKey = "a6ffc074-757a-4cb4-9778-220599824bbd";
+string validApiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "fallback-key-change-me";
+
 
 bool IsValidApiKey(HttpRequest request)
 {
