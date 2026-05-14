@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using System.Collections.Generic;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +14,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 string connectionString = "Data Source=okved.db";
-string adminKey = Environment.GetEnvironmentVariable("ADMIN_API_KEY"); // из переменной окружения
+string adminKey = "48e81c05-dc24-4598-ae0b-eb65d54f0ce4";//Environment.GetEnvironmentVariable("ADMIN_API_KEY"):; // из переменной окружения
 
 // Функция проверки обычного API-ключа
 bool IsValidApiKey(string apiKey)
@@ -99,14 +101,132 @@ app.MapPost("/admin/create-key", async (HttpRequest request, string clientName, 
     }
 });
 
-// Админ-эндпоинт: обновление справочника (только заглушка, пока ручное)
+// Админ-эндпоинт: обновление справочника
 app.MapPost("/admin/update-dictionary", async (HttpRequest request) =>
 {
+    // Проверяем, что запрос пришёл с нашим мастер-ключом
     if (!request.Headers.TryGetValue("X-API-Key", out var apiKey) || !IsAdminKey(apiKey!))
         return Results.Unauthorized();
 
-    // Здесь позже добавим код для скачивания и парсинга свежего CSV/XML
-    return Results.Ok("Update functionality will be implemented soon.");
+    try
+    {
+        // 1. Определяем источник данных
+        //    Используем официальный портал Росстата.
+        //    Это прямая ссылка на свежий CSV-файл от 01.03.2026[reference:0][reference:1].
+        string csvUrl = "https://rosstat.gov.ru/opendata/7708234640-okvedva/data-20260301T1003-structure-20180402T1704.csv";
+
+        // 2. Скачиваем файл
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(csvUrl);
+        if (!response.IsSuccessStatusCode)
+            return Results.BadRequest($"Не удалось скачать CSV. Код ошибки: {response.StatusCode}");
+
+        // 3. Читаем содержимое, определяя правильную кодировку (Windows-1251 для русских текстов)
+        byte[] fileBytes = await response.Content.ReadAsByteArrayAsync();
+        string text;
+        try
+        {
+            text = Encoding.GetEncoding("windows-1251").GetString(fileBytes);
+        }
+        catch
+        {
+            text = Encoding.UTF8.GetString(fileBytes);
+        }
+
+        // 4. Парсим CSV во временную таблицу
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Начинаем транзакцию для целостности данных
+        using var transaction = connection.BeginTransaction();
+
+        // Создаём временную таблицу
+        var createTempCmd = new SqliteCommand(@"
+            CREATE TEMP TABLE temp_okved2 (
+                code TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                name_lower TEXT
+            )", connection);
+        createTempCmd.ExecuteNonQuery();
+
+        // Разбиваем текст на строки и парсим
+        var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        int count = 0;
+        // Пропускаем первую строку с заголовками (их структура нам не важна)
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var parts = SplitCsvLine(line); // Нам понадобится своя простая функция для разделения CSV
+            if (parts.Length >= 2)
+            {
+                // В файле Росстата наша структура: код - во второй колонке, название - в третьей
+                string code = parts[1].Trim('"');
+                string name = parts[2].Trim('"');
+                if (string.IsNullOrWhiteSpace(code) || code == " ") continue;
+
+                string nameLower = name.ToLowerInvariant();
+
+                var insertCmd = new SqliteCommand(@"
+                    INSERT OR REPLACE INTO temp_okved2 (code, name, name_lower)
+                    VALUES (@code, @name, @name_lower)", connection);
+                insertCmd.Parameters.AddWithValue("@code", code);
+                insertCmd.Parameters.AddWithValue("@name", name);
+                insertCmd.Parameters.AddWithValue("@name_lower", nameLower);
+                insertCmd.ExecuteNonQuery();
+                count++;
+            }
+        }
+
+        if (count == 0) return Results.BadRequest("Не удалось распарсить CSV: данные не найдены.");
+
+        // 5. Атомарно заменяем основную таблицу на временную
+        var dropMainCmd = new SqliteCommand("DROP TABLE okved2", connection);
+        dropMainCmd.ExecuteNonQuery();
+
+        var renameCmd = new SqliteCommand("ALTER TABLE temp_okved2 RENAME TO okved2", connection);
+        renameCmd.ExecuteNonQuery();
+
+        // Фиксируем транзакцию
+        transaction.Commit();
+
+        // 6. Сохраняем копию БД с меткой времени на случай отката (опционально)
+        var backupPath = $"okved_backup_{DateTime.Now:yyyyMMdd_HHmmss}.db";
+        connection.Close();
+        File.Copy("okved.db", backupPath);
+        // Удаляем старые бэкапы старше 30 дней
+        var backupFiles = Directory.GetFiles(".", "okved_backup_*.db");
+        foreach (var file in backupFiles)
+        {
+            if (File.GetCreationTime(file) < DateTime.Now.AddDays(-30))
+                File.Delete(file);
+        }
+
+        return Results.Ok($"Справочник успешно обновлён. Загружено {count} кодов.");
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"Ошибка при обновлении: {ex.Message}");
+    }
 });
+
+// <-- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ РАЗДЕЛЕНИЯ CSV (можно разместить где-то в конце файла) -->
+static string[] SplitCsvLine(string line)
+{
+    var result = new List<string>();
+    var inQuotes = false;
+    var startIndex = 0;
+    for (int i = 0; i < line.Length; i++)
+    {
+        if (line[i] == '"')
+            inQuotes = !inQuotes;
+        else if (line[i] == ';' && !inQuotes)
+        {
+            result.Add(line.Substring(startIndex, i - startIndex));
+            startIndex = i + 1;
+        }
+    }
+    result.Add(line.Substring(startIndex));
+    return result.ToArray();
+}
 
 app.Run();

@@ -6,7 +6,9 @@ RUN dotnet publish -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app .
-# Копируем файл базы данных из исходной папки в корень образа
 COPY okved.db .
-RUN chmod 666 okved.db
+RUN apt-get update && apt-get install -y locales locales-all
+ENV LANG ru_RU.UTF-8
+ENV LANGUAGE ru_RU:ru
+ENV LC_ALL ru_RU.UTF-8
 ENTRYPOINT ["dotnet", "OkvedApi.dll"]
