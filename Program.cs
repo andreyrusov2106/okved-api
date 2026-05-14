@@ -110,7 +110,7 @@ app.MapPost("/admin/update-dictionary", async (HttpRequest request) =>
     try
     {
         // 1. Источник данных
-        string csvUrl = "https://classifikators.ru/okved?get=kit";
+        string csvUrl = "https://classifikators.ru/assets/downloads/okved/okved.csv";
 
         // 2. Скачиваем файл
         using var httpClient = new HttpClient();
