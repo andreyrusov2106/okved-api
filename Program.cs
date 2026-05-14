@@ -14,7 +14,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 string connectionString = "Data Source=okved.db";
-string adminKey = "48e81c05-dc24-4598-ae0b-eb65d54f0ce4";//Environment.GetEnvironmentVariable("ADMIN_API_KEY"):; // из переменной окружения
+string adminKey = Environment.GetEnvironmentVariable("ADMIN_API_KEY"):; // из переменной окружения
 
 // Функция проверки обычного API-ключа
 bool IsValidApiKey(string apiKey)
