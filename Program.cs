@@ -113,7 +113,7 @@ app.MapPost("/admin/update-dictionary", async (HttpRequest request) =>
         // 1. Определяем источник данных
         //    Используем официальный портал Росстата.
         //    Это прямая ссылка на свежий CSV-файл от 01.03.2026[reference:0][reference:1].
-        string csvUrl = "https://rosstat.gov.ru/opendata/7708234640-okvedva/data-20260301T1003-structure-20180402T1704.csv";
+        string csvUrl = "https://classifikators.ru/assets/downloads/okved/okved.csv";
 
         // 2. Скачиваем файл
         using var httpClient = new HttpClient();
