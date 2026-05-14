@@ -1,0 +1,17 @@
+name: Update OKVED Dictionary
+
+on:
+  schedule:
+    # Запуск 1-го числа каждого месяца в 3:00 UTC
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    # Позволяет запустить вручную из интерфейса GitHub
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send POST request to update endpoint
+        run: |
+          curl -X POST 'https://okved-api.onrender.com/admin/update-dictionary' \
+          -H 'X-API-Key: ${{ secrets.ADMIN_API_KEY }}'
